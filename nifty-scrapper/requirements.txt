@@ -1,0 +1,3 @@
+json
+selenium
+azure-storage-blob
