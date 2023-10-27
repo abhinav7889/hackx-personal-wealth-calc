@@ -1,3 +1,4 @@
+const investments = [];
 document.addEventListener("DOMContentLoaded", async () => {
   const headerRow = document.createElement("tr");
   const headers = [
@@ -22,10 +23,22 @@ document.addEventListener("DOMContentLoaded", async () => {
   thead.appendChild(headerRow);
   table.appendChild(thead);
 
-  const res = await fetch("http://localhost:5000/");
-  const { data } = await res.json();
-  console.log(data);
-  // Create a row for each stock
+  let data_cache = localStorage.getItem("data_cache");
+  let data;
+  if (!data_cache) {
+    const res = await fetch("http://localhost:5000/");
+    data = await res.json();
+    localStorage.setItem("data_cache", JSON.stringify(data));
+  } else data = JSON.parse(data_cache);
+
+  if (data_cache && data) {
+    if (Date.now() - JSON.parse(data_cache).timestamp > 30 * 60 * 1000) {
+      const res = await fetch("http://localhost:5000/");
+      data = await res.json();
+      localStorage.setItem("data_cache", JSON.stringify(data));
+    }
+  }
+  data = data["data"];
   data.forEach((stock) => {
     const row = document.createElement("tr");
     const cells = [
@@ -48,7 +61,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
   table.appendChild(tbody);
 
-  document.body.appendChild(table);
+  document.getElementById("nifty50_holder").innerHTML = table.outerHTML;
 });
 document.addEventListener("DOMContentLoaded", async () => {
   document.getElementById("sip_form").addEventListener("submit", calculate_sip);
@@ -61,6 +74,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       const savings = parseInt(document.getElementById("savings").value);
       recommend_mutual_fund(income, expenses, savings);
     });
+
+  document.querySelector(".feedback_button").onclick = () => {
+    document.querySelector("#feedback_popover").style.display = "block";
+  };
 });
 
 function calculate_sip(e) {
@@ -379,3 +396,5 @@ function recommend_wealth_management_plan(income, expenses, savings) {
     total_return_rate,
   };
 }
+
+function on_stock_changed() {}
