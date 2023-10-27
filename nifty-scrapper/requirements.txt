@@ -1,3 +1,4 @@
 json
 selenium
 azure-storage-blob
+flask

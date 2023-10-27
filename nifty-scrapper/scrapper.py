@@ -6,6 +6,7 @@ import json
 import os
 from azure.storage.blob import BlobServiceClient, BlobClient, ContainerClient
 from dotenv import load_dotenv
+from azure.data.tables import TableServiceClient
 
 load_dotenv()
 
@@ -13,9 +14,7 @@ app = Flask(__name__)
 CORS(app)
 
 def scrape_nifty():
-  
 
-    # Get the data
     driver = webdriver.Chrome()
     driver.get("https://www.nseindia.com/api/equity-stockIndices?index=NIFTY%2050")
     page_source: str = driver.page_source
@@ -24,16 +23,11 @@ def scrape_nifty():
     data = json.loads(page_source)
     driver.quit()
 
-    # Add timestamp to data
     data["timestamp"] = datetime.datetime.now().timestamp()
 
-    # Convert the data to bytes
-    data_bytes = json.dumps(data).encode('utf-8')
+    return json.dumps(data).encode('utf-8')
 
-    # Upload the data to Azure Blob Storage
 
-    return data_bytes
-    # BEGIN: 8f7e6d4gjw3a
 def check_and_update_blob():
         # Create a BlobServiceClient object
         connect_str = os.getenv('AZURE_STORAGE_CONNECTION_STRING')
@@ -53,19 +47,19 @@ def check_and_update_blob():
             # Get the blob properties
             data_bytes = read_blob()
 
-
             # Calculate the difference between the timestamps
-            diff = current_timestamp.timestamp() - datetime.datetime.fromtimestamp(data_bytes["timestamp"])
+            diff = current_timestamp.timestamp() - float(data_bytes["timestamp"])
 
             # If the difference is more than 30 minutes, update the blob
-            if diff.total_seconds() > 30 * 60 * 1000:
+            if diff > 30 * 60 * 1000:
                 # Scrape the data
                 data_bytes = scrape_nifty()
 
-                # Upload the data to the blob
-                blob_client.upload_blob(data_bytes, metadata={'timestamp': current_timestamp}, overwrite=True)
+                blob_client.upload_blob(data_bytes, overwrite=True)
         else:
              data_bytes = scrape_nifty()
+             blob_client.upload_blob(data_bytes, overwrite=True)
+
 
         return data_bytes
 
